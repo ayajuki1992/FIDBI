@@ -20,7 +20,6 @@ def detect_bounding_box(vid):
     return faces
 
 while True:
-
     result, video_frame = video_capture.read()  # read frames from the video
     if result is False:
         break  # terminate the loop if the frame is not read successfully
