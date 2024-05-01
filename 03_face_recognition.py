@@ -11,7 +11,7 @@ font = cv2.FONT_HERSHEY_SIMPLEX
 cam = cv2.VideoCapture(0)
 cam.set(3, 640) # set video width
 cam.set(4, 480) # set video height
-names = ['None', 'Noraiz', 'Maciej', 'Ismail', 'Sameer', 'Arjun'] 
+names = ['None', 'Noraiz', 'Maciej', 'Ismail', 'Sameer', 'Arjun', 'Maciej_3D'] 
 
 while True:
     ret, img = cam.read()
