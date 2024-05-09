@@ -11,7 +11,7 @@ font = cv2.FONT_HERSHEY_SIMPLEX
 cam = cv2.VideoCapture(0)
 cam.set(3, 640) # set video width
 cam.set(4, 480) # set video height
-names = ['None', 'Noraiz', 'Maciej', 'Ismail', 'Sameer', 'Arjun', 'Maciej_3D'] 
+names = ['None', 'Noraiz', 'Noraiz', 'Noraiz', 'Maciej', 'Maciej', 'Maciej', 'Noraiz', 'Maciej'] 
 
 while True:
     ret, img = cam.read()
@@ -27,7 +27,7 @@ while True:
         id, confidence = recognizer.predict(gray[y:y+h, x:x+w])
 
         # Check if confidence is less than 100 ==> "0" is perfect match 
-        if confidence < 100:
+        if confidence < 65:
             id = names[id]
             confidence = "  {0}%".format(round(100 - confidence))
         else:
