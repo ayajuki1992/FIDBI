@@ -1,6 +1,7 @@
 import cv2
 import face_recognition
 import numpy as np
+import time
 
 # Load the known images
 image_maciej = face_recognition.load_image_file("dataset/User.4.jpg")
@@ -41,18 +42,13 @@ if not video_capture.isOpened():
     print("Error: Could not open camera.")
     exit()
 
-# Thresholds for liveness checks
-movement_threshold = 20
+# Threshold for blinking detection
 blink_threshold = 0.25  # Adjusted blink threshold
 
 blinking_detected = False  # Flag for blinking detection
-movement_detected = False   # Flag for head movement detection
-recognized = False          # Flag for recognized person
-last_face_landmarks = None  # Stores the landmarks of the previous frame
-
-# Checklists for blinking and head movement
-blink_checklist = False
-movement_checklist = False
+recognized = False  # Flag for face recognition
+recognition_timer = None  # Timer for face recognition message
+face_in_frame = False  # Flag to track if face is in frame
 
 while True:
     # Grab a single frame of video
@@ -81,29 +77,15 @@ while True:
                 blinking_detected = True
                 break
 
-    # Check for head movement
-    if last_face_landmarks:
-        for (top, right, bottom, left) in face_locations:
-            if abs(top - last_face_landmarks[0][0]) > movement_threshold:
-                movement_detected = True
-                break
-
-    last_face_landmarks = face_locations
-
-    # If both blinking and head movement are detected, recognize the person
-    if blinking_detected and movement_detected:
-        spoofing_detected = False
-    else:
-        spoofing_detected = True
+    # Reset recognition if no face is detected
+    if not face_locations:
+        recognized = False
+        face_in_frame = False
 
     # Loop through each face found in the frame of video
     for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
         # See if the face is a match for the known face(s)
-        if not spoofing_detected and not recognized:
-            matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
-        else:
-            matches = [False] * len(known_face_encodings)
-
+        matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
         name = "Unknown"
 
         # If a match was found in known_face_encodings, use the first one.
@@ -111,13 +93,14 @@ while True:
             first_match_index = matches.index(True)
             name = known_face_names[first_match_index]
 
-            # If both blinking and head movement are detected, display welcome message
-            if blinking_detected and movement_detected:
+            # Change the name to the individual's name if blinking is detected and not already recognized
+            if blinking_detected and not recognized and face_in_frame:
                 recognized = True
-                cv2.putText(frame, f"Welcome {name}", (50, 50),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
-        if blinking_detected and movement_detected:
-            print("RECOGNIZED")
+                name = known_face_names[first_match_index]
+                message = f"Face recognized. Welcome, {name}"
+                cv2.putText(frame, message, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+                recognition_timer = time.time()
+
         # Draw a box around the face
         cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
 
@@ -126,34 +109,38 @@ while True:
         font = cv2.FONT_HERSHEY_DUPLEX
         cv2.putText(frame, name, (left + 6, bottom - 6), font, 1.0, (255, 255, 255), 1)
 
-    # Display checklist for blinking and head movement
-    if not blink_checklist:
+    # Display blinking checklist or recognition message
+    if recognized:
+        if recognition_timer is not None and time.time() - recognition_timer < 5:
+            cv2.putText(frame, message, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+        else:
+            recognized = False
+            blinking_detected = False
+    elif face_in_frame:
         cv2.putText(frame, "Blink your eyes", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
-    else:
-        cv2.putText(frame, "Blink your eyes [✓]", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
-
-    if not movement_checklist:
-        cv2.putText(frame, "Move your head side to side", (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
-    else:
-        cv2.putText(frame, "Move your head side to side [✓]", (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
 
     # Display the resulting image
     cv2.imshow('Video', frame)
 
-    # If both blinking and head movement are detected, break the loop
-    if blinking_detected and movement_detected:
-        break
+    # Check if recognition message timer has expired
+    if recognition_timer is not None and time.time() - recognition_timer >= 5:
+        recognized = False
+        recognition_timer = None
+
+    # Reset blinking detection flag after recognition
+    if recognized:
+        blinking_detected = False
+
+    # Check if face is in frame
+    if face_locations:
+        face_in_frame = True
+    else:
+        face_in_frame = False
 
     # Hit 'q' on the keyboard to quit
     key = cv2.waitKey(1)
     if key & 0xFF == ord('q'):
         break
-
-    # Update checklist if blinking and head movement are detected
-    if blinking_detected:
-        blink_checklist = True
-    if movement_detected:
-        movement_checklist = True
 
 # Release handle to the webcam
 video_capture.release()
