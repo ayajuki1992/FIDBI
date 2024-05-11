@@ -102,12 +102,17 @@ while True:
             if blinking_detected and not recognized and face_in_frame:
                 recognized = True
                 name = known_face_names[first_match_index]
-                message = f"Face recognized. Welcome, {name}"
-                cv2.putText(frame, message, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
-                recognition_timer = time.time()
-                # Update attendance
-                attendance.append((name, 'Present', datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-
+                attendance_record = (name, 'Present', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                if attendance_record not in attendance:
+                    message = f"Face recognized. Welcome, {name}"
+                    cv2.putText(frame, message, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+                    recognition_timer = time.time()
+                    # Update attendance
+                    attendance.append(attendance_record)
+                else:
+                    cv2.putText(frame, "Attendance stored already", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+                    recognition_timer = time.time()
+        
         # Draw a box around the face
         cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
 
