@@ -3,6 +3,7 @@ import face_recognition
 import numpy as np
 import time
 import csv
+from datetime import datetime
 
 # Load the known images
 image_maciej = face_recognition.load_image_file("dataset/User.4.jpg")
@@ -35,8 +36,8 @@ known_face_names = [
     'Arjun',
 ]
 
-# Attendance dictionary to store attendance data
-attendance = {}
+# Attendance list
+attendance = []
 
 # Initialize video capture
 video_capture = cv2.VideoCapture(0)
@@ -104,10 +105,8 @@ while True:
                 message = f"Face recognized. Welcome, {name}"
                 cv2.putText(frame, message, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
                 recognition_timer = time.time()
-                
-                # Add to attendance if not already added
-                if name not in attendance:
-                    attendance[name] = time.strftime("%Y-%m-%d %H:%M:%S")
+                # Update attendance
+                attendance.append((name, 'Present', datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
 
         # Draw a box around the face
         cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
@@ -115,7 +114,10 @@ while True:
         # Draw a label with a name below the face
         cv2.rectangle(frame, (left, bottom - 35), (right, bottom), (0, 0, 255), cv2.FILLED)
         font = cv2.FONT_HERSHEY_DUPLEX
-        cv2.putText(frame, name, (left + 6, bottom - 6), font, 1.0, (255, 255, 255), 1)
+        if recognized:
+            cv2.putText(frame, name, (left + 6, bottom - 6), font, 1.0, (255, 255, 255), 1)
+        else:
+            cv2.putText(frame, "Unknown", (left + 6, bottom - 6), font, 1.0, (255, 255, 255), 1)
 
     # Display blinking checklist or recognition message
     if recognized:
@@ -155,18 +157,8 @@ video_capture.release()
 cv2.destroyAllWindows()
 
 # Write attendance to CSV file
-try:
-    with open('attendance.csv', 'a', newline='') as csvfile:
-        fieldnames = ['Name', 'Time']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        
-        # Write header if file is empty
-        if csvfile.tell() == 0:
-            writer.writeheader()
-        
-        for name, time in attendance.items():
-            writer.writerow({'Name': name, 'Time': time})
-    
-    print("Attendance successfully saved.")
-except Exception as e:
-    print(f"Error: {e}. Could not write attendance data to file.")
+with open('attendance.csv', mode='w', newline='') as file:
+    writer = csv.writer(file)
+    writer.writerow(['Name', 'Status', 'Date Time'])
+    for record in attendance:
+        writer.writerow(record)
